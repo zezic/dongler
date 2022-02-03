@@ -10,6 +10,9 @@ fn send_message() -> io::Result<()> {
     	let mut stdin = io::stdin(); // We get `Stdin` here.
     	stdin.read_line(&mut buffer)?;
     	println!("user say: {}", buffer);
+    	if buffer.contains("/exit") {
+    		break;
+    	}
 	}
 
     Ok(())
