@@ -12,26 +12,44 @@ enum Entmsg {
 }
 
 fn handle_client(stream: TcpStream, thread_tx: Sender<Entmsg>, brx: Receiver<String>) {
-	let clonestream = stream.try_clone().unwrap();
-    thread::Builder::new()
-                    .name(format!("{}", clonestream.peer_addr().unwrap()))
-                    .spawn(move || {
-                        // connection succeeded
-                        client_reader(clonestream, thread_tx)
-                    })
-                    .unwrap();
-    thread::Builder::new()
-                    .name(format!("{}", stream.peer_addr().unwrap()))
-                    .spawn(move || {
-                        // connection succeeded
-                        client_writer(stream, brx)
-                    })
-                    .unwrap();
-
+    let stream_clone = match stream.try_clone() {
+        Ok(stream) => stream,
+        Err(err) => {
+            println!("cannot clone stream: {}", err);
+            return;
+        }
+    };
+    let peer_addr = match stream_clone.peer_addr() {
+        Ok(socket_addr) => socket_addr,
+        Err(err) => {
+            println!("cannot get socket addr: {}", err);
+            return;
+        }
+    };
+    let build_result = thread::Builder::new()
+        .name(format!("{}", peer_addr))
+        .spawn(move || {
+            // connection succeeded
+            client_reader(stream_clone, thread_tx)
+        });
+    if let Err(err) = build_result {
+        println!("cannot spawn thread: {}", err);
+        return;
+    }
+    let build_result = thread::Builder::new()
+        .name(format!("{}", peer_addr))
+        .spawn(move || {
+            // connection succeeded
+            client_writer(stream, brx)
+        });
+    if let Err(err) = build_result {
+        println!("cannot spawn thread: {}", err);
+        return;
+    }
 }
 
 fn client_reader(mut stream: TcpStream, thread_tx: Sender<Entmsg>) {
-	let mut data = [0 as u8; 50]; // using 50 byte buffer
+    let mut data = [0 as u8; 50]; // using 50 byte buffer
     loop {
         match stream.read(&mut data) {
             Ok(size) => {
@@ -43,7 +61,6 @@ fn client_reader(mut stream: TcpStream, thread_tx: Sender<Entmsg>) {
             Err(_) => {}
         };
     }
-
 }
 
 fn client_writer(mut stream: TcpStream, brx: Receiver<String>) {
@@ -54,7 +71,6 @@ fn client_writer(mut stream: TcpStream, brx: Receiver<String>) {
             stream.write_all(butter).unwrap();
         }
     }
-
 }
 
 fn broadcaster(rx: Receiver<Entmsg>) {
