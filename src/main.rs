@@ -4,7 +4,7 @@ use std::net::TcpStream;
 use std::str::from_utf8;
 
 fn main() {
-    send_message();
+    send_message().unwrap();
     match TcpStream::connect("localhost:3333") {
         Ok(mut stream) => {
             println!("Successfully connected to server in port 3333");
@@ -39,7 +39,7 @@ fn main() {
 fn send_message() -> io::Result<()> {
     loop {
         let mut buffer = String::new();
-        let mut stdin = io::stdin(); // We get `Stdin` here.
+        let stdin = io::stdin(); // We get `Stdin` here.
         stdin.read_line(&mut buffer)?;
         println!("user say: {}", buffer);
         if buffer.contains("/exit") {

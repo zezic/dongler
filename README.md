@@ -6,7 +6,7 @@ My own chat written in rust
 
 - [ ] Handle results instead of using `.unwrap()`
 - [ ] Handle unicode decoding errors
-- [ ] Fix latency
+- [x] Fix latency
 
 ## Features Roadmap
 
