@@ -49,16 +49,19 @@ fn handle_client(stream: TcpStream, thread_tx: Sender<Entmsg>, brx: Receiver<Str
 }
 
 fn client_reader(mut stream: TcpStream, thread_tx: Sender<Entmsg>) {
-    let mut data = [0 as u8; 50]; // using 50 byte buffer
+    const BUFFER_SIZE: usize = 1024;
+    let mut data = [0 as u8; BUFFER_SIZE]; // using 50 byte buffer
     loop {
         match stream.read(&mut data) {
             Ok(size) => {
-            	println!("read some bytes: {}", size);
+                if size == 0 {
+                    println!(
+                        "read 0-bytes message from client, that's illegal, stopping client reader"
+                    );
+                    return;
+                }
                 let client_data = match str::from_utf8(&data[0..size]) {
-                    Ok(string) => {
-                    	string.to_string()
-
-                    }
+                    Ok(string) => string.to_string(),
                     Err(err) => {
                         println!("cannot decode utf8: {}", err);
                         return;
@@ -67,8 +70,8 @@ fn client_reader(mut stream: TcpStream, thread_tx: Sender<Entmsg>) {
 
                 let to_broadcast = thread_tx.send(Entmsg::RecvToBc(client_data));
                 if let Err(err) = to_broadcast {
-                	println!("cannot send client data: {}", err);
-                	return;
+                    println!("cannot send client data: {}", err);
+                    return;
                 }
             }
             Err(err) => {
@@ -95,7 +98,11 @@ fn broadcaster(rx: Receiver<Entmsg>) {
         let entmsg = rx.recv().unwrap();
         match entmsg {
             Entmsg::RecvToBc(msgstring) => {
-                println!("broadcaster recv msg: <{}> , length is: {}", msgstring.clone(), msgstring.len());
+                println!(
+                    "broadcaster recv msg: <{}> , length is: {}",
+                    msgstring.clone(),
+                    msgstring.len()
+                );
                 for user in &clients {
                     user.send(msgstring.clone()).unwrap();
                 }
