@@ -53,12 +53,28 @@ fn client_reader(mut stream: TcpStream, thread_tx: Sender<Entmsg>) {
     loop {
         match stream.read(&mut data) {
             Ok(size) => {
-                // echo everything!
-                let clienter = str::from_utf8(&data[0..size]).unwrap().to_string();
-                thread_tx.send(Entmsg::RecvToBc(clienter)).unwrap();
-                //stream.write(&data[0..size]).unwrap();
+            	println!("read some bytes: {}", size);
+                let client_data = match str::from_utf8(&data[0..size]) {
+                    Ok(string) => {
+                    	string.to_string()
+
+                    }
+                    Err(err) => {
+                        println!("cannot decode utf8: {}", err);
+                        return;
+                    }
+                };
+
+                let to_broadcast = thread_tx.send(Entmsg::RecvToBc(client_data));
+                if let Err(err) = to_broadcast {
+                	println!("cannot send client data: {}", err);
+                	return;
+                }
             }
-            Err(_) => {}
+            Err(err) => {
+                println!("cannot read stream data: {}", err);
+                return;
+            }
         };
     }
 }
@@ -76,11 +92,10 @@ fn client_writer(mut stream: TcpStream, brx: Receiver<String>) {
 fn broadcaster(rx: Receiver<Entmsg>) {
     let mut clients: Vec<Sender<String>> = vec![];
     loop {
-        //std::thread::sleep(std::time::Duration::from_secs(1));
         let entmsg = rx.recv().unwrap();
         match entmsg {
             Entmsg::RecvToBc(msgstring) => {
-                println!("broadcaster recv msg: {}", msgstring.clone());
+                println!("broadcaster recv msg: <{}> , length is: {}", msgstring.clone(), msgstring.len());
                 for user in &clients {
                     user.send(msgstring.clone()).unwrap();
                 }
