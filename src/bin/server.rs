@@ -50,7 +50,7 @@ fn handle_client(stream: TcpStream, thread_tx: Sender<Entmsg>, brx: Receiver<Str
 
 fn client_reader(mut stream: TcpStream, thread_tx: Sender<Entmsg>) {
     const BUFFER_SIZE: usize = 1024;
-    let mut data = [0 as u8; BUFFER_SIZE]; // using 50 byte buffer
+    let mut data = [0 as u8; BUFFER_SIZE];
     loop {
         match stream.read(&mut data) {
             Ok(size) => {
